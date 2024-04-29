@@ -101,9 +101,9 @@ class Server(object):
                 else:
                     msg = Message(Header.DISCOVER, Type.RESPONSE, {"status": 404, "failure_msg": "File in database is empty"})
             elif msg_header == Header.DOWNLOAD:
-                peers_list, pieces_count = self.download(msg_info)
+                peers_list, pieces_count, hash_string = self.download(msg_info)
                 if len(peers_list) != 0:
-                    msg = Message(Header.DISCOVER, Type.RESPONSE, {"status": 200,"peers_list": peers_list, "pieces_count": pieces_count})
+                    msg = Message(Header.DISCOVER, Type.RESPONSE, {"status": 200,"peers_list": peers_list, "pieces_count": pieces_count, "hash_string": hash_string})
                 else:
                     msg = Message(Header.DISCOVER, Type.RESPONSE, {"status": 404, "failure_msg": "No one have the file you need"})
             elif msg_header == Header.LOG_OUT:
@@ -192,95 +192,26 @@ class Server(object):
         IDs = None
         file_name = info.get("file_name")
         pieces_count = None
+        hash_string = None
+        found  = False
         with open("./store/db.json", "r") as fp:
                 data = json.load(fp)
         if "files" in data:
             for file in data["files"]:
                 if file.get("file_name") == file_name:
+                    found = True
                     IDs = file.get("ID")
                     pieces_count = file.get("pieces_count")
-        if "clients" in data:
-            for id in IDs: # need reformat clients in database
-                for client in data["clients"]:
-                    if client.get("ID") == id:
-                        peers_list.append(client)
-        return peers_list, pieces_count
-# def build_response():
-#     msg = ""
-#     for client in clients_info.values():
-#         msg += f"{client['port']} "
-#     return msg
-# def handle_request(conn, addr ,event_flag):
-#     while True:
-#         try:
-#             data = conn.recv(const.PACKET_SIZE).decode(FORMAT) # receive data from a socket
-#         except ConnectionResetError:
-#             break
-#         if not data:
-#             clients_info.pop(addr[0])
-#             break
-
-#         print(f"{addr} send: {data}")
-#         conn.send(build_response().encode(FORMAT))
-#     conn.close()
-# def run_server():
-#     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     server.bind(ADDR)
-#     server.listen()
-#     print(f"Listening on port {ADDR}")
-
-#     index = 0
-#     while True:
-#         # Listen to clients
-#         conn, addr = server.accept()
-#         clients_info[addr[0]] = {
-#             'port': addr[1]
-#         }
-#         index = index + 1
-#         conn.send(f"Welcome {addr} to PhongTorrent".encode(FORMAT))
-#         thread = threading.Thread(target=handle_request, args=(conn, addr, event_flag))
-#         thread.start()
-
+                    hash_string = file.get("hash_string")
+        if found:
+            if "clients" in data:
+                for id in IDs: # need reformat clients in database
+                    for client in data["clients"]:
+                        if client.get("ID") == id:
+                            peers_list.append(client)
+            return peers_list, pieces_count, hash_string
+        else:
+            return [], 0, ""
 # __main__
 server = Server(8003)
 server.start()
-# run_server()
-
-
-
-
-
-
-
-
-
-
-# dictionary = {
-#     "emp_details": [
-#         {
-#             "emp_name": "John",
-#             "email": "john@example.com",
-#             "job_profile": "Manager"
-#         }
-#     ]
-# }
-# # Write the dictionary directly to a file
-# with open("sample.json", "w") as outfile:
-#     json.dump(dictionary, outfile)
-
-
-
-# new_data = {
-#     "emp_name": "Nikhil",
-#     "email": "nikhil@geeksforgeeks.org",
-#     "job_profile": "Full Time"
-# }
-# with open("sample.json", 'r+') as file:
-#     file_data = json.load(file)
-#     file_data["emp_details"].append(new_data)
-
-#     # Set the file's current position at offset
-#     file.seek(0)
-
-#     # Convert back to JSON and write to the file
-#     json.dump(file_data, file, indent=4)
