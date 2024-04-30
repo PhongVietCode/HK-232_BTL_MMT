@@ -213,5 +213,9 @@ class Server(object):
         else:
             return [], 0, ""
 # __main__
-server = Server(8003)
-server.start()
+def main():
+    server = Server(8003)
+    server.start()
+
+if __name__ == "__main__":
+    main()

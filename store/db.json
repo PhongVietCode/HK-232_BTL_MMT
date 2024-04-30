@@ -1,29 +1,10 @@
 {
     "clients": [
         {
-            "ID": 457,
-            "IP": "192.168.1.25",
-            "PORT": 65318
-        },
-        {
-            "ID": 742,
-            "IP": "192.168.1.25",
-            "PORT": 65217
+            "ID": 780,
+            "IP": "192.168.1.5",
+            "PORT": 65494
         }
     ],
-    "files": [
-        {
-            "ID": [
-                31,
-                457,
-                742
-            ],
-            "file_name": "file1.txt",
-            "hash_string": "9ce0203b00098622c35dd4c892d8323b3cbdd31adb828ab2174656c99a088ba6",
-            "pieces_count": 31,
-            "pieces_length": {
-                "12": 31
-            }
-        }
-    ]
+    "files": []
 }

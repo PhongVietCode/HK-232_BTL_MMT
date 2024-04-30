@@ -55,7 +55,7 @@ class Client:
         listen_thread.start()
 
         # main thread
-        self.get_input()
+        #self.get_input()
         
     def init_server_socket(self):
         self.p2s_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -68,22 +68,22 @@ class Client:
         self.ouput_mutex.acquire()
         self.output_queue.put(cnt)
         self.ouput_mutex.release()
-    def get_input(self):
-        while self.is_printing:
+    def get_input(self, inp):
+        #while self.is_printing:
             # self.push_output('>> \t')
-            inp = input()
+            #inp = input()
             # info = None
             cmd = inp.split(" ")[0]
             
             if cmd.lower() == "upload":
                 if not self.is_loging_in:
                     self.push_output("You have to login first")
-                    continue
+                    #continue
                 try:
                     info = inp.split(" ")[1]
                     if info.split(".")[1] != "txt":
                         self.push_output("Sorry! Current version just supoprts file type '.txt'!")
-                        continue
+                        #continue
                     message = self.preprocess_upload_file(info)
                     self.push_output(f"msg: {message.get_full_message()}")
                     self.send_msg(message)
@@ -104,7 +104,7 @@ class Client:
                     info = inp.split(" ")[1]
                     if info.split(".")[1] != 'txt':
                         self.push_output("Sorry! Current version just supoprts file type '.txt'!")
-                        continue
+                        #continue
                     message = Message(Header.DOWNLOAD, Type.REQUEST, {"file_name": info})
                     res = self.send_msg(message)
                     self.download(info,res)
@@ -121,7 +121,7 @@ class Client:
                 self.push_output("Closing...")
                 time.sleep(0.5)
                 self.close()
-                break
+                #break
             elif cmd.lower() == 'help':
                 self.push_output("U need some help!??")
             else:
@@ -525,6 +525,11 @@ class Client:
         self.p2p_socket.close()
         os._exit(1)
 
-client = Client()
-client.start()
+def main():
+    client = Client()
+    client.start()
+    
+if __name__ == "__main__":
+    main()
+
 
