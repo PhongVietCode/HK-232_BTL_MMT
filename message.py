@@ -29,7 +29,7 @@ class Message:
         return self._header
     def get_type(self):
         return self._type
-    def get_info(self):
+    def get_info(self): 
         return self._info
     def get_full_message(self):
         return {'header': self._header.value, 'type': self._type.value, 'info': self._info}

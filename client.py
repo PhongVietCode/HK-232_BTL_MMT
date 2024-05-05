@@ -120,6 +120,9 @@ class Client:
                 self.send_msg(message)
             self.push_output("Logout done !")   
         elif cmd.lower() == "download":
+            if not self.is_loging_in:
+                self.push_output("You have to login first")
+                return
             try:
                 download_files = inp.split(" ")[1:]
                 for f in download_files:
@@ -207,13 +210,11 @@ class Client:
                 msg = Message(Header.PING, Type.RESPONSE, {"status": 200})
             else:
                 msg = Message(Header.PING, Type.RESPONSE, {"status": 404})
+            peer_socket.send(json.dumps(msg.get_full_message()).encode())  
         elif msg_header == Header.DOWNLOAD:
             response = self.reply_download(msg_info)
-            if response:
-                msg = Message(Header.DOWNLOAD, Type.RESPONSE, {"status": 200, "data": response})
-            else:
-                msg = Message(Header.DOWNLOAD, Type.RESPONSE, {"status": 404})
-        peer_socket.send(json.dumps(msg.get_full_message()).encode())
+            peer_socket.sendall(response)
+            
         
     def send_msg(self, message):
         res = self.init_server_socket()
@@ -229,9 +230,9 @@ class Client:
             self.push_output("CONNECT_SERVER_ERROR")    
     def upload(self, file_name, number):
         info = file_name
-        if info.split(".")[1] != "txt":
-            self.push_output("Sorry! Current version just supoprts file type '.txt'!")
-            return
+        # if info.split(".")[1] != "txt":
+        #     self.push_output("Sorry! Current version just supoprts file type '.txt'!")
+        #     return
         chunks_folder = info.split('.')[0] + '_chunks'
         files = os.listdir(self.local_file_folder)
         if chunks_folder in files:
@@ -243,9 +244,9 @@ class Client:
         thrd.start()
     def download_many_files(self, file_name, number):
         info = file_name
-        if info.split(".")[1] != 'txt':
-            self.push_output("Sorry! Current version just supoprts file type '.txt'!")
-            return
+        # if info.split(".")[1] != 'txt':
+        #     self.push_output("Sorry! Current version just supoprts file type '.txt'!")
+        #     return
         files = os.listdir(self.local_file_folder)
         if info in files:
             self.push_output("File have been loaded in your folder")
@@ -328,9 +329,9 @@ class Client:
         self.push_output(f"Download done: {end_time - start_time}")
         # ===== Check the correction of the combined file
         self.combine_file(file_name, hash_string, pieces_count)
-        # message = Message(Header.UPLOAD, Type.REQUEST, {"ID": self.client_id,"file_name": file_name, "hash_string": hash_string, "pieces_count": pieces_count})
-        # self.push_output(f"File upload done: {message.get_info()}")
-        # self.send_msg(message)
+        message = Message(Header.UPLOAD, Type.REQUEST, {"ID": self.client_id,"file_name": file_name, "hash_string": hash_string, "pieces_count": pieces_count})
+        self.push_output(f"File upload done: {message.get_info()}")
+        self.send_msg(message)
     def check_peer_living(self,living_peers, ip, port):
         sck = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
@@ -356,12 +357,12 @@ class Client:
                 start_time = time.time()
                 sck.sendall(json.dumps(message.get_full_message()).encode())
                 
-                response = sck.recv(const.PACKET_SIZE).decode()
+                response = sck.recv(const.PACKET_SIZE)
                 end_time = time.time()
                 self.download_speed = end_time - start_time
                 sck.close()
-                response = Message(None,None,None, response)
-                request_thread = Thread(target=self.response_peer_download, args=(response.get_info(), pieces_count, peer_index, start_index, file_name,slot_download_mutex,slot_download_queue_mutex))
+                # response = Message(None,None,None, response)
+                request_thread = Thread(target=self.response_peer_download, args=(response, pieces_count, peer_index, start_index, file_name,slot_download_mutex,slot_download_queue_mutex))
                 thread_array.append(request_thread)
                 request_thread.start()
                 start_index = start_index + 1
@@ -370,14 +371,14 @@ class Client:
         for thread in thread_array:
             thread.join()
     def response_peer_download(self, response, pieces_count, peer_index, chunk_index, file_name,slot_download_mutex,slot_download_queue_mutex):
-        status = response.get("status")          
-        if status == 200: # download successfully
-            data = response.get("data")
+        # status = response.get("status")          
+        if response: # download successfully
+            # data = response
             try:
                 chunk_folder = self.create_folder(self.local_file_folder + file_name.split(".")[0] + "_chunks")
                 chunk_filename = f"{file_name.split('.')[0]}_chunk#{chunk_index}.{file_name.split('.')[1]}"
-                with open(chunk_folder + chunk_filename, "w") as fp:
-                    fp.write(data)
+                with open(chunk_folder + chunk_filename, "wb") as fp:
+                    fp.write(response)
                 slot_download_mutex.acquire()
                 downloaded_chunks = self.slot_download_list[file_name]['downloaded_chunks']
                 self.slot_download_list[file_name].update({"downloaded_chunks": (downloaded_chunks + 1)})
@@ -397,9 +398,9 @@ class Client:
             chunk_folder = self.create_folder(self.local_file_folder + file_name.split(".")[0] + "_chunks")
             chunk_filename = f"{file_name.split('.')[0]}_chunk#{chunk_index}.{file_name.split('.')[1]}"
             
-            with open(chunk_folder + chunk_filename, "r") as fp:
+            with open(chunk_folder + chunk_filename, "rb") as fp:
                 data = fp.read()
-                return data
+            return data
         except:
             return None
     def get_local_repository_path(self):
@@ -426,10 +427,10 @@ class Client:
         try:
             with open(self.local_file_folder + file_name, "rb") as bigfile:
                 file_content = bigfile.read()
-                sha256 = hashlib.sha256()
-                sha256.update(file_content)
-                hash_result = sha256.hexdigest()
-                return hash_result
+            sha256 = hashlib.sha256()
+            sha256.update(file_content)
+            hash_result = sha256.hexdigest()
+            return hash_result
         except:
             self.push_output("Hash file has error/File doesn't exist")  
     def split_file(self, file_name, chunk_size):
@@ -441,6 +442,7 @@ class Client:
             with open(self.local_file_folder + file_name, "rb") as bigfile:
                 chunk_folder = self.create_folder(self.local_file_folder + file_name.split(".")[0] + "_chunks")
                 file_size = os.path.getsize(self.local_file_folder + file_name)
+                self.push_output(f'{file_size}')
                 while True:
                     chunk = bigfile.read(chunk_size)
                     if not chunk:
