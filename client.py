@@ -15,6 +15,7 @@ from collections import Counter
 import time
 import math
 import shutil
+from array import array
 
 IP = socket.gethostbyname(socket.gethostname())
 SERVER_IP = const.SERVER_IP
@@ -262,6 +263,7 @@ class Client:
         peers_list = response.get("peers_list")
         pieces_count = response.get("pieces_count")
         hash_string = response.get("hash_string")
+        pieces_length = response.get("pieces_length")
         if not peers_list:
             self.push_output("No peer contain your file! Use 'discover' command to know which file is available")
             return
@@ -301,7 +303,7 @@ class Client:
         # ======= Request download chunks ========
         start_time = time.time()
         for peer in living_peers:
-            thr = Thread(target=self.request_peer_download, args=(peer, start_piece_index, end_piece_index, file_name, pieces_count, peer_index,slot_download_mutex,slot_download_queue_mutex ))
+            thr = Thread(target=self.request_peer_download, args=(peer, start_piece_index, end_piece_index, file_name, pieces_count, peer_index,slot_download_mutex,slot_download_queue_mutex, pieces_length, len(living_peers)))
             thread_array.append(thr)
             thr.start()
             peer_index = peer_index + 1
@@ -318,19 +320,23 @@ class Client:
             slot_download_queue_mutex.acquire()
             request = self.request_block_queue.get()
             slot_download_queue_mutex.release() 
-            request_thread = Thread(target=self.request_peer_download, args=(living_peers[request.get("peer_index")], request.get("chunk_index"), request.get("chunk_index"), request.get("file_name"), pieces_count, request.get("peer_index"),slot_download_mutex,slot_download_queue_mutex))
+            request_thread = Thread(target=self.request_peer_download, args=(living_peers[request.get("peer_index")], request.get("chunk_index"), request.get("chunk_index"), request.get("file_name"), pieces_count, request.get("peer_index"),slot_download_mutex,slot_download_queue_mutex,pieces_length, len(living_peers)))
             thread_array.append(request_thread)
             request_thread.start()
         for thread in thread_array:
             thread.join()
         end_time = time.time()
         del self.slot_download_list[file_name]
-        self.push_output(f"Download done: {end_time - start_time}")
+        self.push_output(f"Download {file_name} done: {end_time - start_time}")
         # ===== Check the correction of the combined file
-        self.combine_file(file_name, hash_string, pieces_count)
-        message = Message(Header.UPLOAD, Type.REQUEST, {"ID": self.client_id,"file_name": file_name, "hash_string": hash_string, "pieces_count": pieces_count})
-        self.push_output(f"File upload done: {message.get_info()}")
-        self.send_msg(message)
+        self.push_output(f"Checking {file_name} file error...")
+        if self.combine_file(file_name, hash_string, pieces_count):
+            message = Message(Header.UPLOAD, Type.REQUEST, {"ID": self.client_id,"file_name": file_name, "hash_string": hash_string, "pieces_count": pieces_count})
+            self.push_output(f"File {file_name} upload done: {message.get_info()}")
+            self.send_msg(message)
+        else:
+            os.remove(self.local_file_folder + file_name)
+            shutil.rmtree(self.local_file_folder + file_name.split(".")[0] + "_chunks")
     def check_peer_living(self,living_peers, ip, port):
         sck = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
@@ -346,7 +352,7 @@ class Client:
             pass
             
             
-    def request_peer_download(self, peer, start_index, end_index, file_name, pieces_count, peer_index,slot_download_mutex,slot_download_queue_mutex):
+    def request_peer_download(self, peer, start_index, end_index, file_name, pieces_count, peer_index,slot_download_mutex,slot_download_queue_mutex, pieces_length, peers_count):
         thread_array = []
         while start_index <= end_index: # use request block queue
             sck = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -361,7 +367,7 @@ class Client:
                 self.download_speed = end_time - start_time
                 sck.close()
                 # response = Message(None,None,None, response)
-                request_thread = Thread(target=self.response_peer_download, args=(response, pieces_count, peer_index, start_index, file_name,slot_download_mutex,slot_download_queue_mutex))
+                request_thread = Thread(target=self.response_peer_download, args=(response, pieces_count, peer_index, start_index, file_name,slot_download_mutex,slot_download_queue_mutex, pieces_length, peers_count))
                 thread_array.append(request_thread)
                 request_thread.start()
                 start_index = start_index + 1
@@ -369,24 +375,37 @@ class Client:
                 self.push_output(f"Error in request_peer_download: {e}")
         for thread in thread_array:
             thread.join()
-    def response_peer_download(self, response, pieces_count, peer_index, chunk_index, file_name,slot_download_mutex,slot_download_queue_mutex):
-        # status = response.get("status")          
-        if response: # download successfully
-            # data = response
+    def response_peer_download(self, response, pieces_count, peer_index, chunk_index, file_name,slot_download_mutex,slot_download_queue_mutex, pieces_length, peers_count):
+        # status = response.get("status")     
+        check_valid = True
+        file_sizes = []
+        for s in pieces_length.keys():
+            file_sizes.append(int(s))
+        if not response:
+            check_valid = False
+        else:
             try:
                 chunk_folder = self.create_folder(self.local_file_folder + file_name.split(".")[0] + "_chunks")
                 chunk_filename = f"{file_name.split('.')[0]}_chunk#{chunk_index}.{file_name.split('.')[1]}"
                 with open(chunk_folder + chunk_filename, "wb") as fp:
                     fp.write(response)
+                file_size = os.path.getsize(chunk_folder + chunk_filename)
+                # self.push_output(f"Downloaded file size: {file_size}")
+                if chunk_index != pieces_count:
+                    if file_size < file_sizes[0]:
+                        check_valid = False
+                else:
+                    if file_size < file_sizes[1]:
+                        check_valid= False
                 slot_download_mutex.acquire()
                 downloaded_chunks = self.slot_download_list[file_name]['downloaded_chunks']
                 self.slot_download_list[file_name].update({"downloaded_chunks": (downloaded_chunks + 1)})
-                slot_download_mutex.release()  
+                slot_download_mutex.release() 
             except Exception as e: 
-                self.push_output(f"Error in response_peer_download: {e}")
-        else: # download failed
+                pass
+        if not check_valid: # download failed
             slot_download_queue_mutex.acquire()
-            self.request_block_queue.put({"peer_index": (peer_index + 1) % 2, "file_name": file_name, "chunk_index": chunk_index})
+            self.request_block_queue.put({"peer_index": (peer_index + 1) % peers_count, "file_name": file_name, "chunk_index": chunk_index})
             slot_download_queue_mutex.release()
     def reply_ping(self):
         return True
@@ -493,7 +512,7 @@ class Client:
         files = os.listdir(self.local_file_folder)
         for f in files:
             if len(f.split('_')) > 1:
-                shutil.rmtree(self.local_file_folder + f)
+                shutil.rmtree(f)
     def close(self):
         if self.is_loging_in: 
             self.is_loging_in = False

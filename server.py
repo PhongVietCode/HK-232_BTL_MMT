@@ -122,9 +122,9 @@ class Server(object):
                 else:
                     msg = Message(Header.DISCOVER, Type.RESPONSE, {"status": 404, "failure_msg": "File in database is empty"})
             elif msg_header == Header.DOWNLOAD:
-                peers_list, pieces_count, hash_string = self.download(msg_info)
+                peers_list, pieces_count, hash_string, pieces_length = self.download(msg_info)
                 if len(peers_list) != 0:
-                    msg = Message(Header.DOWNLOAD, Type.RESPONSE, {"status": 200,"peers_list": peers_list, "pieces_count": pieces_count, "hash_string": hash_string})
+                    msg = Message(Header.DOWNLOAD, Type.RESPONSE, {"status": 200,"peers_list": peers_list, "pieces_count": pieces_count, "hash_string": hash_string, "pieces_length": pieces_length})
                 else:
                     msg = Message(Header.DOWNLOAD, Type.RESPONSE, {"status": 404, "failure_msg": "No one have the file you need"})
             elif msg_header == Header.LOG_OUT:
@@ -220,6 +220,7 @@ class Server(object):
         peers_list = []
         IDs = None
         file_name = info.get("file_name")
+        piece_length = None
         pieces_count = None
         hash_string = None
         found  = False
@@ -231,6 +232,7 @@ class Server(object):
                     IDs = file.get("ID")
                     pieces_count = file.get("pieces_count")
                     hash_string = file.get("hash_string")
+                    pieces_length = file.get("pieces_length")
                     break
         if found:
             if "clients" in data:
@@ -238,6 +240,6 @@ class Server(object):
                     for client in data["clients"]:
                         if client.get("ID") == id:
                             peers_list.append(client)
-            return peers_list, pieces_count, hash_string
+            return peers_list, pieces_count, hash_string, pieces_length
         else:
-            return [], 0, ""
+            return [], 0, "",{}
