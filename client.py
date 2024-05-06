@@ -151,10 +151,10 @@ class Client:
         response = self.send_msg(message)
         if response:
             if response['status'] == 200:
-                self.push_output(f'{response['msg']}')
+                self.push_output(f'{response["msg"]}')
                 self.is_loging_in = True
             else:
-                self.push_output(f'{response['failure_msg']}')
+                self.push_output(f'{response["failure_msg"]}')
         else:
             self.push_output("Cannot connect to server")
     def copyfile(self, file_name, number):
