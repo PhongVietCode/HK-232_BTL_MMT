@@ -71,7 +71,7 @@ class Server(object):
             create new thread to handle for new comer
         """
         self.server_socket.listen()
-        self.push_output(f"Server listening on port {const.SERVER_PORT}")
+        self.push_output(f"Server listening on {IP}:{const.SERVER_PORT}")
         while self.is_listening:
             try:
                 conn, addr = self.server_socket.accept()            
@@ -223,9 +223,7 @@ class Server(object):
         pieces_count = None
         hash_string = None
         found  = False
-        with self.access_file_mutex:
-            with open("./store/db.json", "r") as fp:
-                    data = json.load(fp)
+        data = self.file_data
         if "files" in data:
             for file in data["files"]:
                 if file.get("file_name") == file_name:
@@ -233,6 +231,7 @@ class Server(object):
                     IDs = file.get("ID")
                     pieces_count = file.get("pieces_count")
                     hash_string = file.get("hash_string")
+                    break
         if found:
             if "clients" in data:
                 for id in IDs: # need reformat clients in database

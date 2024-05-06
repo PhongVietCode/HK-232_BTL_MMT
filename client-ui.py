@@ -37,7 +37,7 @@ class Client_UI(tk.Tk):
         frame = tk.Frame()
         
         # =========
-        label = tk.Label(frame, text="File Sharing Application (Client)", font=("Sans Serif", 20, "bold"))
+        label = tk.Label(frame, text=f"File Sharing Application (Client {self.client.client_id})", font=("Sans Serif", 20, "bold"))
         # =========
         left_frame = tk.Frame(frame)
         

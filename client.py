@@ -17,6 +17,7 @@ import math
 import shutil
 
 IP = socket.gethostbyname(socket.gethostname())
+SERVER_IP = const.SERVER_IP
 HOST = socket.gethostname()
 ADDR = (IP,const.SERVER_PORT)
 FORMAT = 'utf-8'
@@ -46,8 +47,6 @@ class Client:
         
         self.slot_download_list = {}
          
-        self.check_client_mutex = Lock()
-        self.check_client_mutex.acquire()
     def start(self):
         self.push_output("Staring...")
         self.p2p_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -69,7 +68,7 @@ class Client:
     def init_server_socket(self):
         self.p2s_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
-            self.p2s_socket.connect(ADDR)
+            self.p2s_socket.connect((SERVER_IP,const.SERVER_PORT))
             return 1
         except:
             return 0
