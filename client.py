@@ -102,13 +102,8 @@ class Client:
                 self.push_output("Not enough information")
         elif cmd.lower() == "login": #check 
             if not self.is_loging_in:
-                self.is_loging_in = True
-                message = Message(Header.LOG_IN,Type.REQUEST, {"ID": self.client_id, "IP": IP, "PORT": self.client_port})
-                response = self.send_msg(message)
-                if response['status'] == 200:
-                    self.push_output(f'{response['msg']}')
-                else:
-                    self.push_output(f'{response['failure_msg']}')
+                t = Thread(target=self.login, args=())
+                t.start()
             else: 
                 self.push_output("You have already logged in!")
         elif cmd.lower() == "logout":
@@ -150,6 +145,18 @@ class Client:
                 Thread(target=self.copyfile, args=(f, 1)).start()
         else:
             self.push_output("Wrong command? Try another !")
+    def login(self):
+        self.push_output("Logging in...")
+        message = Message(Header.LOG_IN,Type.REQUEST, {"ID": self.client_id, "IP": IP, "PORT": self.client_port})
+        response = self.send_msg(message)
+        if response:
+            if response['status'] == 200:
+                self.push_output(f'{response['msg']}')
+                self.is_loging_in = True
+            else:
+                self.push_output(f'{response['failure_msg']}')
+        else:
+            self.push_output("Cannot connect to server")
     def copyfile(self, file_name, number):
         self.push_output(f"Copying {file_name}") 
         local_path = self.get_local_repository_path()

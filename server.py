@@ -71,7 +71,7 @@ class Server(object):
             create new thread to handle for new comer
         """
         self.server_socket.listen()
-        self.push_output(f"Server listening on {IP}:{const.SERVER_PORT}")
+        self.push_output(f"Server listening on {IP} :{const.SERVER_PORT}")
         while self.is_listening:
             try:
                 conn, addr = self.server_socket.accept()            
@@ -89,13 +89,13 @@ class Server(object):
             if not message: 
                 client_socket.close()
             else:
-                self.push_output(f"{address} request:")
-                self.request_message_process(client_socket, message)
+                self.push_output(f"{address} request")
+                self.request_message_process(client_socket,address, message)
         except Exception as e:
             print(f"ERROR with {address}: {e}")
             
                 
-    def request_message_process(self,client_socket, message):
+    def request_message_process(self,client_socket,address, message):
         """
             process the request message from client and call correspond function
         """
@@ -107,6 +107,7 @@ class Server(object):
             self.push_output("--------------")
             if msg_header == Header.LOG_IN:
                 if self.login(msg_info):
+                    msg_info.update({"IP": address[0]})
                     msg = Message(Header.LOG_IN, Type.RESPONSE, {"status": 200, "msg": "Login successfull"})
                 else:
                     msg = Message(Header.LOG_IN, Type.RESPONSE, {"status": 505, "failure_msg": "Have some error in saving client information !"})
