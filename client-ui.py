@@ -78,7 +78,7 @@ class Client_UI(tk.Tk):
         throughput_statistic_frame.grid(row=0, column=1, sticky='ne')
         
         self.download_window = cv
-        thrd = Thread(target=self.check_dowloading_files, args=())
+        thrd = Thread(target=self.check_dowloading_files, daemon=True)
         thrd.start()
         return statistic_frame
     def ds_thread(self, container, number):
@@ -124,8 +124,8 @@ class Client_UI(tk.Tk):
         
         item_frame.pack(expand=True, fill=tk.X, padx=10, side=tk.BOTTOM)
         track_thread = Thread(target=self.track_file_percentage, args=(item_frame, pb, pct, file_info))    
-        track_thread.start()
         self.thread_list.append(track_thread)
+        track_thread.start()
     def track_file_percentage(self,item_frame, pb,pct, file_info):
         chunks = file_info['downloaded_chunks']
         max_chunks = file_info['pieces_count']

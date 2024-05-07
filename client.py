@@ -361,15 +361,22 @@ class Client:
             
     def request_peer_download(self, peer, start_index, end_index, file_name, pieces_count, peer_index,slot_download_mutex,slot_download_queue_mutex, pieces_length, peers_count):
         thread_array = []
+        file_sizes = []
+        for s in pieces_length.keys():
+            file_sizes.append(int(s))
         while start_index <= end_index: # use request block queue
             sck = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            if start_index != pieces_count - 1:
+                s = file_sizes[0]
+            else:
+                s = file_sizes[1]
             try:
                 sck.connect((peer.get("IP"),peer.get("PORT")))
                 message = Message(Header.DOWNLOAD, Type.REQUEST, {"file_name": file_name, "chunk_index": start_index})
                 start_time = time.time()
                 sck.sendall(json.dumps(message.get_full_message()).encode())
                 
-                response = sck.recv(const.PACKET_SIZE)
+                response = sck.recv(s, socket.MSG_WAITALL)
                 end_time = time.time()
                 self.download_speed = end_time - start_time
                 sck.close()
