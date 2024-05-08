@@ -1,35 +1,4 @@
 {
-    "clients": [
-        {
-            "ID": 566,
-            "IP": "127.0.0.1",
-            "PORT": 65005
-        }
-    ],
-    "files": [
-        {
-            "ID": [
-                566
-            ],
-            "file_name": "file4.json",
-            "hash_string": "dce36130357c6fb76fddfc6521b7b76e4b80118c086b4f633c729ad4c7e27a34",
-            "pieces_count": 19,
-            "pieces_length": {
-                "8192": 18,
-                "7403": 1
-            }
-        },
-        {
-            "ID": [
-                566
-            ],
-            "file_name": "1.png",
-            "hash_string": "088391f3fe49e87d2aba13f484d2fefc692ee59f16cc58e1133dbdd51da83c52",
-            "pieces_count": 38,
-            "pieces_length": {
-                "8192": 37,
-                "7646": 1
-            }
-        }
-    ]
+    "clients": [],
+    "files": []
 }

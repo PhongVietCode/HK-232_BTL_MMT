@@ -6,12 +6,8 @@ class Type(Enum):
 class Header(Enum):
     PING = 0
     DISCOVER = 1
-    PUBLISH = 2
-    FETCH = 3
-    REGISTER = 4
     LOG_IN = 5
     LOG_OUT = 6
-    RETRIEVE = 7
     UPLOAD = 8
     DOWNLOAD = 9
     
